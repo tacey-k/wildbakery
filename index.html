@@ -97,7 +97,7 @@ nav.main a:hover{background:var(--cream-2)}
 
 /* menu */
 .menu{background:var(--white);border-radius:40px;margin:0 16px;padding:90px 0}
-.filters{display:inline-flex;gap:6px;background:var(--cream);padding:6px;border-radius:999px;margin-top:22px}
+.filters{display:inline-flex;gap:6px;background:var(--white);padding:6px;border-radius:999px;margin-top:22px;box-shadow:0 1px 3px rgba(43,29,20,.08)}
 .filters button{padding:10px 22px;border-radius:999px;font-weight:700;font-size:15px;color:var(--muted)}
 .filters button.on{background:var(--choc);color:var(--cream)}
 .cat{margin-top:56px}
@@ -274,7 +274,7 @@ nav.main a.on{background:var(--choc);color:var(--cream)}
 .basket-bar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;background:var(--choc);color:var(--cream);border-radius:20px;padding:16px 18px 16px 26px;margin-top:40px}
 .basket-bar b{font-family:var(--serif);font-size:22px}
 .basket-bar span{color:rgba(251,245,234,.75);font-size:15px}
-.fav-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.fav-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
 .fav{background:var(--white);border-radius:var(--r);padding:26px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
 .fav .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .fav h3{font-size:24px}
@@ -285,7 +285,8 @@ nav.main a.on{background:var(--choc);color:var(--cream)}
 .link-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
 .order-actions{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:22px}
 .single{max-width:760px}
-@media (max-width:1000px){.fav-grid{grid-template-columns:1fr}}
+@media (max-width:1000px){.fav-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:600px){.fav-grid{grid-template-columns:1fr}}
 @media (max-width:1000px){nav.main{display:none}}
 .mnav{display:none}
 @media (max-width:1000px){
@@ -370,6 +371,29 @@ footer.ft .wrap{display:block}
 .ordertext.light{background:var(--white);color:var(--choc);border:1px solid var(--line);margin-bottom:14px}
 .newlink{display:block;margin:20px auto 0;color:var(--muted);font-weight:600;text-decoration:underline}
 
+/* ---- v11 ---- */
+.view[data-view="menu"] .page-head{padding-bottom:0}
+.view[data-view="menu"] .cat:first-child{margin-top:28px}
+.view[data-view="menu"] section{padding-top:0!important}
+a.fav{display:flex;flex-direction:column;gap:10px;color:var(--choc);text-decoration:none;transition:transform .2s,box-shadow .2s;min-height:280px}
+a.fav:hover{transform:translateY(-4px);box-shadow:0 2px 4px rgba(43,29,20,.05),0 22px 40px -18px rgba(43,29,20,.3)}
+.fav .pill{align-self:flex-start;font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:999px;background:var(--gold-soft);color:var(--gold-d)}
+.fav .pill.ghost{background:var(--cream);color:var(--muted)}
+.fav h3{font-size:25px;margin-top:4px}
+.fav p{flex:1}
+.fav .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:14px;border-top:1px solid var(--line)}
+.fav .more{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:15px;color:var(--rust)}
+.fav .more svg{width:17px;height:17px;transition:transform .2s}
+a.fav:hover .more svg{transform:translateX(3px)}
+.fav.all{background:var(--choc);color:var(--cream)}
+.fav.all .pill{background:var(--gold);color:var(--choc)}
+.fav.all h3{color:var(--cream)}
+.fav.all p{color:rgba(251,245,234,.75)}
+.fav.all .big{font-family:var(--serif);font-size:56px;font-weight:700;color:var(--gold);line-height:1}
+.fav.all .foot{border-color:rgba(251,245,234,.15)}
+.fav.all .more{color:var(--gold)}
+@keyframes flash{0%,40%{background:var(--gold-soft);box-shadow:0 0 0 12px var(--gold-soft)}100%{background:transparent;box-shadow:0 0 0 12px transparent}}
+.item.flash{animation:flash 2.2s ease;border-radius:12px}
 /* ---- v10: flavours ---- */
 .list{align-items:start}
 .item{align-content:start}
@@ -452,9 +476,9 @@ footer.ft .wrap{display:block}
   </div></section>
 
   <section class="sec" style="padding-top:20px"><div class="wrap">
-    <div class="sec-head"><span class="eyebrow" data-t="fav_eyebrow"></span><h2 data-t="fav_h"></h2></div>
+    <div class="sec-head"><span class="eyebrow" data-t="fav_eyebrow"></span><h2 data-t="fav_h"></h2><p data-t="fav_sub"></p></div>
     <div class="fav-grid" id="favs"></div>
-    <div class="center" style="margin-top:34px"><a class="btn btn-dark" href="#menu" data-go="menu" data-t="see_full_menu"></a></div>
+    <div class="center" style="margin-top:34px"><a class="btn btn-gold" href="#menu" data-go="menu"><span data-t="see_full_menu"></span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
   </div></section>
 
   <section class="sec" style="padding-top:0"><div class="wrap"><div class="soon-card">
@@ -582,7 +606,7 @@ const SETTINGS = {
   leadDays: 1,
   deliveryDays: [3,6],          // 0=Sun … 3=Wed … 6=Sat — delivery only on Wednesdays & Saturdays
   pickupDays: [0,1,2,3,4,5,6],  // pickup: any day
-  favourites: ["classic-sourdough","focaccia","cinnamon-box"],
+  favourites: ["classic-sourdough","specialty-sourdough","focaccia"],
 };
 const U = id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&h=800&q=75`;
 const PRODUCTS = [
@@ -732,9 +756,9 @@ const VARIANTS = {
     {id:"cranberry",          en:"Cranberry",              fr:"Canneberges"},
     {id:"seeded",             en:"Seeded",                 fr:"Aux graines"},
     {id:"rosemary-basil",     en:"Rosemary Basil",         fr:"Romarin et basilic"},
+    {id:"sundried-tomato-basil", en:"Sun-Dried Tomato & Basil", fr:"Tomates séchées et basilic"},
   ],
   "focaccia": [
-    {id:"sundried-tomato-basil", en:"Sun-Dried Tomato & Basil", fr:"Tomates séchées et basilic"},
     {id:"rosemary-basil",        en:"Rosemary & Basil",         fr:"Romarin et basilic"},
     {id:"onion-olives",          en:"Onion & Olives",           fr:"Oignon et olives"},
     {id:"apple-rosemary",        en:"Apple & Rosemary",         fr:"Pommes et romarin"},
@@ -787,6 +811,7 @@ Object.assign(T.en,{
   del_h:"Delivery everywhere", del_p:"We deliver everywhere on Wednesdays and Saturdays. Leave your address at checkout and we'll confirm the timing with you.",
   w3p:"Not just one neighbourhood — we deliver everywhere on Wednesdays and Saturdays.",
   del_days_hint:"Delivery runs on Wednesdays and Saturdays.", del_short:"Wed & Sat", e_date_pick:"Please choose a day.",
+  fav_eyebrow:"A taste of the menu", fav_h:"Customer favourites", fav_sub:"Just three of our favourites — the full menu has every bread and sweet we bake.", see_in_menu:"See in menu", all_k:"Full menu", all_h:"Breads & sweets", all_p:"Sourdough, milk breads, focaccia, baguettes, ciabatta, cinnamon rolls, cookies and cakes.", see_full_menu:"See the full menu",
   st3:"Send order", choose_flavour:"Choose a flavour", flavours:"flavours", pick_first:"Choose a flavour first", in_basket:"In your basket:", place:"Continue to last step", nopay2:"Next: send us your order by text. No payment online.",
   not_sent_b:"Your order is not sent yet!", not_sent_p:"We only receive it once you text it to us — it takes 5 seconds.",
   send_h:"Send us your order", how1:"Tap the button below — your messages app opens with your order already written.",
@@ -807,6 +832,7 @@ Object.assign(T.fr,{
   del_h:"Livraison partout", del_p:"Nous livrons partout les mercredis et samedis. Indiquez votre adresse lors de la commande et nous confirmerons l'heure avec vous.",
   w3p:"Pas seulement un quartier — nous livrons partout les mercredis et samedis.",
   del_days_hint:"Livraison les mercredis et samedis.", del_short:"mer. et sam.", e_date_pick:"Veuillez choisir une journée.",
+  fav_eyebrow:"Un aperçu du menu", fav_h:"Les favoris", fav_sub:"Seulement trois de nos favoris — le menu complet présente tous nos pains et douceurs.", see_in_menu:"Voir dans le menu", all_k:"Menu complet", all_h:"Pains et douceurs", all_p:"Levain, pains au lait, focaccia, baguettes, ciabatta, brioches à la cannelle, biscuits et gâteaux.", see_full_menu:"Voir tout le menu",
   st3:"Envoi", choose_flavour:"Choisissez une saveur", flavours:"saveurs", pick_first:"Choisissez d'abord une saveur", in_basket:"Dans votre panier :", place:"Continuer vers la dernière étape", nopay2:"Ensuite : envoyez-nous votre commande par texto. Aucun paiement en ligne.",
   not_sent_b:"Votre commande n'est pas encore envoyée!", not_sent_p:"Nous la recevons seulement quand vous nous l'envoyez par texto — ça prend 5 secondes.",
   send_h:"Envoyez-nous votre commande", how1:"Appuyez sur le bouton ci-dessous — votre application de messages s'ouvre avec la commande déjà écrite.",
@@ -891,7 +917,7 @@ function applyStatic(){
   document.querySelectorAll("a.social.fb").forEach(a=>{ if(SETTINGS.facebook) a.href=SETTINGS.facebook; });
 }
 function itemHTML(p){
-  return `<div class="item${p.variants?" wide":""}">
+  return `<div class="item${p.variants?" wide":""}" id="item-${p.id}">
     <div class="nm"><h4>${esc(p.name)}</h4>${p.unit?`<span class="unit">${esc(unitOf(p))}</span>`:""}${p.tag?`<span class="tag">${t("tag_"+p.tag)}</span>`:""}</div>
     <div class="price">${fmt(p.price)}</div>
     <p>${esc(p[lang])}</p>
@@ -902,10 +928,22 @@ function renderCounts(){
   document.querySelectorAll(".barTotal").forEach(el=>el.textContent=`${itemsLabel(count())} · ${fmt(subtotal())}`);
 }
 function renderHome(){
-  document.getElementById("favs").innerHTML = SETTINGS.favourites.filter(id=>byId[id]).map(id=>{ const p=byId[id]; return `<div class="fav">
-    <div class="top"><h3>${esc(p.name)}</h3><span class="price">${fmt(p.price)}</span></div>
-    ${p.unit?`<span class="unit" style="color:var(--rust);font-weight:600;font-size:14px">${esc(unitOf(p))}</span>`:""}
-    <p>${esc(p[lang])}</p>${p.variants ? variantHTML(p) : `<div class="act">${addBtn(id)}</div>`}</div>`; }).join("");
+  const favs = SETTINGS.favourites.filter(id=>byId[id]).map(id=>{ const p=byId[id];
+    const badge = p.variants ? `${p.variants.length} ${t("flavours")}` : (p.tag ? t("tag_"+p.tag) : "");
+    return `<a class="fav" href="#menu" data-go="menu" data-focus="${id}">
+      ${badge?`<span class="pill">${badge}</span>`:`<span class="pill ghost">${t("cat_"+p.cat)}</span>`}
+      <h3>${esc(p.name)}</h3><p>${esc(p[lang])}</p>
+      <div class="foot"><span class="price">${fmt(p.price)}</span><span class="more">${t("see_in_menu")} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div></a>`; }).join("");
+  const all = `<a class="fav all" href="#menu" data-go="menu">
+      <span class="pill">${t("all_k")}</span>
+      <div class="big">${PRODUCTS.length}</div><h3>${t("all_h")}</h3><p>${t("all_p")}</p>
+      <div class="foot"><span class="more">${t("see_full_menu")} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div></a>`;
+  document.getElementById("favs").innerHTML = favs + all;
+}
+function focusItem(id){
+  const el=document.getElementById("item-"+id); if(!el) return;
+  try{ el.scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){ el.scrollIntoView(); }
+  el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
 }
 function renderMenu(){
   const cats = ["bread","sweets"].filter(k => filter==="all" || filter===k);
@@ -1070,7 +1108,7 @@ function orderText(o){
 document.addEventListener("click", e=>{
   const b = e.target.closest("button, a"); if(!b) return;
   const d = b.dataset;
-  if(d.go){ e.preventDefault(); go(d.go); return; }
+  if(d.go){ e.preventDefault(); if(d.focus && filter!=="all"){ filter="all"; document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("on",x.dataset.filter==="all")); } go(d.go); if(d.focus) setTimeout(()=>focusItem(d.focus),60); return; }
   if(b.classList.contains("social") && b.getAttribute("href")==="#"){ e.preventDefault(); return; }
   if(d.pick){ pick[d.pick]=d.var; delete needPick[d.pick]; renderView(); }
   else if(d.addv){ if(!pick[d.addv]){ needPick[d.addv]=true; renderView(); return; } const k=d.addv+"::"+pick[d.addv]; cart[k]=Math.min(50,(cart[k]||0)+1); save(); renderView(); }
