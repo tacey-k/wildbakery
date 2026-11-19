@@ -507,13 +507,15 @@ a.bf-card:hover .more svg{transform:translateX(3px)}
 .bf-card.mystery::after{right:24px;bottom:132px;font-size:120px;color:rgba(226,164,16,.32)}
 .bf-card.mystery > *{position:relative;z-index:1}
 /* ---- v15 Black Friday popup ---- */
-.pop-wrap{position:fixed;inset:0;z-index:200;background:rgba(20,13,8,.62);overflow-y:auto;padding:70px 16px 40px;opacity:0;transition:opacity .2s}
+.pop-wrap{position:fixed;inset:0;z-index:200;background:rgba(20,13,8,.62);overflow-y:auto;padding:70px 16px 40px;animation:popfade .25s ease both;transition:opacity .2s}
+@keyframes popfade{from{opacity:0}to{opacity:1}}
+@keyframes popin{from{transform:translateY(16px) scale(.98)}to{transform:none}}
 .pop-wrap[hidden]{display:none}
-.pop-wrap.on{opacity:1}
+.pop-wrap.out{opacity:0}
 html.pop-open,html.pop-open body{overflow:hidden}
 .pop{position:relative;max-width:560px;margin:0 auto;background:#1E140D;color:var(--cream);border-radius:28px;padding:38px 34px 30px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
-  background-image:radial-gradient(420px 220px at 100% 0%,rgba(226,164,16,.25),transparent 70%);transform:translateY(16px) scale(.98);transition:transform .25s ease}
-.pop-wrap.on .pop{transform:none}
+  background-image:radial-gradient(420px 220px at 100% 0%,rgba(226,164,16,.25),transparent 70%);animation:popin .28s ease both}
+
 .pop-x{position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;background:rgba(251,245,234,.1);color:var(--cream);display:grid;place-items:center;z-index:2}
 .pop-x:hover{background:var(--cream);color:var(--choc)}
 .pop-x svg{width:18px;height:18px}
@@ -541,6 +543,11 @@ a.pop-row:hover{transform:translateX(4px)}
   .pop .bf-off{width:84px;height:84px;margin-top:0} .pop .bf-off b{font-size:27px}
   .pop-act .btn{width:100%;justify-content:center} .pop-act{justify-content:center}
 }
+/* ---- v17 delivery minimum ---- */
+.minwarn{background:#FDECE4;border:1.5px solid #E7B49C;color:#7A2E12;border-radius:14px;padding:14px 16px;margin:0 0 18px;font-size:15px;line-height:1.5}
+.minwarn b{display:block;color:#7A2E12}
+.minwarn a{color:var(--rust);font-weight:700;white-space:nowrap}
+.note.minnote{color:var(--rust);font-weight:600}
 </style>
 </head>
 <body>
@@ -757,12 +764,43 @@ const SETTINGS = {
   facebook: "https://www.facebook.com/p/Wild-Bakery-61589901374871/",    // full link, e.g. "https://www.facebook.com/yourpage"
   orderEndpoint: "",     // optional Formspree URL — orders then arrive automatically when hosted
   leadDays: 1,
-  deliveryDays: [3,6],          // 0=Sun … 3=Wed … 6=Sat — delivery only on Wednesdays & Saturdays
-  pickupDays: [0,1,2,3,4,5,6],  // pickup: any day
+  // CALENDAR — at checkout customers can choose ONLY these days (every order, boxes included).
+  // weekly: 0=Sun 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat · weeklyFrom: first date the weekly days apply · extraDates: one-off dates
+  delivery: { weekly:[3,0], weeklyFrom:"2026-12-01", extraDates:["2026-11-26","2026-11-29"] },  // Nov: 26 & 29 only · from Dec: every Wed & Sun
+  pickup:   { weekly:[2,6], weeklyFrom:"2026-12-01", extraDates:["2026-11-27","2026-11-28"] },  // Nov: 27 & 28 only · from Dec: every Tue & Sat
+  deliveryMin: 20,              // minimum order ($) for delivery
   favourites: ["classic-sourdough","specialty-sourdough","focaccia"],
-  blackFriday: true,   // Black Friday boxes: set to false when the promo ends — hides the boxes, banner, ribbon and popup everywhere
-  bfPopupEveryHours: 24,  // after a visitor closes the Black Friday popup, show it again only after this many hours
+  blackFriday: true,   // Black Friday boxes: set to false to hide the boxes, banner, ribbon and popup everywhere
+  blackFridayUntil: "2026-11-29",   // last day of the promo — after this date everything Black Friday disappears by itself
+  // Black Friday popup: shows once per visit (each time the site is opened in a new tab / window)
 };
+function dayISO(d){ const z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
+function dayOf(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d,12); }
+/* Delivery wording, built from SETTINGS so it updates itself (e.g. the November dates drop off once they pass). */
+function delivText(l, kind){ return schedText("delivery", l, kind); }
+function pickText(l, kind){ return schedText("pickup", l, kind); }
+function schedText(method, l, kind){
+  const C = SETTINGS[method];
+  const loc = l==="fr" ? "fr-CA" : "en-CA", today = dayISO(new Date()), amp = l==="fr" ? " et " : " & ";
+  const wd = (dow, style) => new Date(2026,0,4+dow,12).toLocaleDateString(loc,{weekday:style});   // Jan 4 2026 = Sunday
+  const wkS = C.weekly.map(x=>wd(x,"short")).join(amp);
+  const wkL = C.weekly.map(x=>wd(x,"long")).join(l==="fr"?" et ":" and ");
+  const from = C.weeklyFrom && C.weeklyFrom > today ? dayOf(C.weeklyFrom).toLocaleDateString(loc,{month:"long"}) : "";
+  const first = (()=>{ const d=new Date(); d.setDate(d.getDate()+(SETTINGS.leadDays||0)); return dayISO(d); })();   // earliest day a customer can still book
+  const extra = (C.extraDates||[]).filter(x=>x>=first).sort();
+  let ex = "";
+  if(extra.length){
+    const join = a => a.length>1 ? a.slice(0,-1).join(", ")+amp+a[a.length-1] : a[0];
+    if(new Set(extra.map(x=>x.slice(0,7))).size===1){
+      const mon = dayOf(extra[0]).toLocaleDateString(loc,{month: kind==="short"?"short":"long"}), nums = join(extra.map(x=>String(+x.slice(8))));
+      ex = l==="fr" ? `${nums} ${mon}` : `${mon} ${nums}`;
+    } else ex = join(extra.map(x=>dayOf(x).toLocaleDateString(loc,{month:"short",day:"numeric"})));
+  }
+  if(kind==="short") return ex ? (l==="fr" ? `${ex}, puis ${wkS}` : `${ex}, then ${wkS}`) : wkS;
+  const weekly = l==="fr" ? `chaque ${wkL}${from?" dès "+from:""}` : `every ${wkL}${from?" from "+from:""}`;
+  return ex ? (l==="fr" ? `les ${ex}, puis ${weekly}` : `${ex}, then ${weekly}`) : weekly;
+}
+function bfUntil(l){ return SETTINGS.blackFridayUntil ? dayOf(SETTINGS.blackFridayUntil).toLocaleDateString(l==="fr"?"fr-CA":"en-CA",{month:"long",day:"numeric"}) : ""; }
 const U = id => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=800&h=800&q=75`;
 const PRODUCTS = [
   {id:"country-sourdough",cat:"bread",name:"Country Sourdough",price:8.50,img:U("1594218028574-2a8663f7759f"),
@@ -823,7 +861,7 @@ const T = {
   faq:[
    ["Do I pay online?","No. Placing a pre-order is free — you pay when you pick up or receive your order."],
    ["How far ahead should I order?","Order at least one day before the date you want. We bake to order, so a little notice lets us bake it fresh for you."],
-   ["Where can I pick up?","In Gatineau or Downtown Ottawa — you choose at checkout. The exact address and time come with your confirmation."],
+   ["Where and when can I pick up?","In Gatineau or Downtown Ottawa — you choose at checkout. Pickup days: "+pickText("en","long")+". The exact address and time come with your confirmation."],
    ["Do you deliver?","Yes — everywhere. Add your address at checkout and we'll confirm the delivery timing with you."],
    ["How do I know my order is confirmed?","After you place your pre-order, we'll confirm it by text or phone before we bake."]],
   soon_eyebrow:"Coming soon", soon_h:"Our own bakery is on its way.", soon_p:"We're getting ready to open the first Wild Bakery location. Follow us to be the first to know when and where — and to see what's coming out of the oven this week.",
@@ -875,7 +913,7 @@ const T = {
   faq:[
    ["Dois-je payer en ligne?","Non. La précommande est gratuite — vous payez à la cueillette ou à la livraison."],
    ["Combien de temps à l'avance commander?","Au moins un jour avant la date souhaitée. Nous cuisons sur commande : un peu d'avance nous permet de cuire votre pain frais."],
-   ["Où puis-je récupérer ma commande?","À Gatineau ou au centre-ville d'Ottawa — vous choisissez au moment de commander. L'adresse et l'heure vous sont envoyées avec la confirmation."],
+   ["Où et quand puis-je récupérer ma commande?","À Gatineau ou au centre-ville d'Ottawa — vous choisissez au moment de commander. Jours de cueillette : "+pickText("fr","long")+". L'adresse et l'heure vous sont envoyées avec la confirmation."],
    ["Livrez-vous?","Oui — partout. Indiquez votre adresse et nous confirmerons l'heure de livraison avec vous."],
    ["Comment savoir si ma commande est confirmée?","Après votre précommande, nous la confirmons par texto ou par téléphone avant de cuire."]],
   soon_eyebrow:"Bientôt", soon_h:"Notre propre boulangerie arrive.", soon_p:"Nous préparons l'ouverture du premier comptoir Wild Bakery. Suivez-nous pour être les premiers informés — et voir ce qui sort du four cette semaine.",
@@ -947,7 +985,8 @@ const BOXES = [
    en:"Can't decide? Let us surprise you.", fr:"Vous hésitez? Laissez-nous vous surprendre.", mystery:true,
    incl:[{en:"A surprise selection of our bakery favourites!",fr:"Une sélection surprise de nos favoris de la boulangerie!"}]},
 ];
-if(SETTINGS.blackFriday) PRODUCTS.unshift(...BOXES);
+const BF_ON = SETTINGS.blackFriday && (!SETTINGS.blackFridayUntil || dayISO(new Date()) <= SETTINGS.blackFridayUntil);
+if(BF_ON) PRODUCTS.unshift(...BOXES);
 (p=>{ if(p){ p.en="Our soft milk loaf with flavourful fillings — pick your favourite."; p.fr="Notre pain au lait moelleux avec de savoureuses garnitures — choisissez votre préférée."; } })(PRODUCTS.find(p=>p.id==="specialty-milk"));
 (p=>{ if(p){ p.en="Soft milk bread with a golden crust, topped with rosemary or sesame."; p.fr="Pain au lait moelleux à la croûte dorée, garni de romarin ou de sésame."; } })(PRODUCTS.find(p=>p.id==="topped-milk"));
 (p=>{ if(p){ p.tag=null; p.en="Our naturally leavened loaf with flavourful inclusions — pick your favourite."; p.fr="Notre pain au levain avec de savoureux ajouts — choisissez votre préféré."; } })(PRODUCTS.find(p=>p.id==="specialty-sourdough"));
@@ -987,18 +1026,22 @@ Object.assign(T.fr,{
 });
 
 Object.assign(T.en,{
-  top:"Pre-orders open · Pickup in Gatineau & Downtown Ottawa · Delivery Wed & Sat",
+  top:"Pickup "+pickText("en","short")+" · Delivery "+delivText("en","short"),
   sig_l1:"Naturally leavened with our own sourdough starter",
-  f3:"Delivery everywhere — Wednesdays & Saturdays", delivery_s:"Everywhere · Wed & Sat",
-  del_h:"Delivery everywhere", del_p:"We deliver everywhere on Wednesdays and Saturdays. Leave your address at checkout and we'll confirm the timing with you.",
-  w3p:"Not just one neighbourhood — we deliver everywhere on Wednesdays and Saturdays.",
-  del_days_hint:"Delivery runs on Wednesdays and Saturdays.", del_short:"Wed & Sat", e_date_pick:"Please choose a day.",
+  f3:"Delivery everywhere — "+delivText("en","short"), delivery_s:"Min. order "+"$"+SETTINGS.deliveryMin+" · "+delivText("en","short"), pickup_s:"Free · "+pickText("en","short"),
+  pick_p:"Pickup days: "+pickText("en","long")+". Choose Gatineau or Downtown Ottawa at checkout — the exact address and time come with your order confirmation.",
+  pick_days_hint:"Pickup days: "+pickText("en","long")+".",
+  min_warn:"Delivery needs a minimum order of "+"$"+SETTINGS.deliveryMin+".", min_add:"Add {x} more, or choose free pickup.", e_min:"Delivery needs a minimum order of "+"$"+SETTINGS.deliveryMin+".",
+  min_note:"Delivery is available on orders of "+"$"+SETTINGS.deliveryMin+" or more — add {x} more for delivery, or choose free pickup.",
+  del_h:"Delivery everywhere", del_p:"We deliver everywhere: "+delivText("en","long")+". Minimum order for delivery: "+"$"+SETTINGS.deliveryMin+". Leave your address at checkout and we'll confirm the timing with you.",
+  w3p:"Not just one neighbourhood — we deliver everywhere on orders of "+"$"+SETTINGS.deliveryMin+"+: "+delivText("en","long")+".",
+  del_days_hint:"Delivery days: "+delivText("en","long")+".", del_short:delivText("en","short"), e_date_pick:"Please choose a day.",
   fav_eyebrow:"A taste of the menu", fav_h:"Customer favourites", fav_sub:"Just three of our favourites — the full menu has every bread and sweet we bake.", see_in_menu:"See in menu", all_k:"Full menu", all_h:"Breads & sweets", all_p:"Sourdough, milk breads, focaccia, baguettes, ciabatta, cinnamon rolls, cookies and cakes.", see_full_menu:"See the full menu",
-  pop_p:"Our favourite breads and sweets, boxed together — save up to 30%. Pre-order now, pay on pickup or delivery.", pop_cta:"See the boxes", pop_later:"Maybe later", pop_close:"Close",
+  pop_p:"Our favourite breads and sweets, boxed together — save up to 30%. Only until "+bfUntil("en")+". Pay on pickup or delivery.", pop_cta:"See the boxes", pop_later:"Maybe later", pop_close:"Close",
   bf_tag:"Black Friday", bf_h:"Black Friday Boxes", bf_p:"Our favourite breads and sweets, boxed together at a special price. Pre-order like any other item — pay on pickup or delivery.",
-  bf_upto:"up to", bf_off:"off", bf_ribbon:"Bread boxes up to 30% off", bf_see:"See the boxes", bf_choose:"Choose this box",
-  bf_reg_price:"Regular price", bf_reg_value:"Regular value", bf_inside:"Inside the box", boxes_n:"boxes", f_boxes:"Black Friday", cat_boxes:"Black Friday Boxes", bf_limited:"Limited time",
-  tag_bf_best:"Best value", choose_choice:"Baguette or ciabatta — your choice", pick_first_choice:"Choose baguette or ciabatta first",
+  bf_upto:"up to", bf_off:"off", bf_ribbon:"Bread boxes up to 30% off · until "+bfUntil("en"), bf_see:"See the boxes", bf_choose:"Choose this box",
+  bf_reg_price:"Regular price", bf_reg_value:"Regular value", bf_inside:"Inside the box", boxes_n:"boxes", f_boxes:"Black Friday", cat_boxes:"Black Friday Boxes", bf_limited:"Until "+bfUntil("en"),
+  tag_bf_best:"Best value", with_w:"with", add_box:"Add box to order", choose_choice:"Baguette or ciabatta — your choice", pick_first_choice:"Choose baguette or ciabatta first",
   st3:"Send order", choose_flavour:"Choose a flavour", flavours:"flavours", pick_first:"Choose a flavour first", choose_topping:"Choose a topping", toppings:"toppings", pick_first_top:"Choose a topping first", in_basket:"In your basket:", place:"Continue to last step", nopay2:"Next: send us your order by text. No payment online.",
   not_sent_b:"Your order is not sent yet!", not_sent_p:"We only receive it once you text it to us — it takes 5 seconds.",
   send_h:"Send us your order", how1:"Tap the button below — your messages app opens with your order already written.",
@@ -1008,23 +1051,27 @@ Object.assign(T.en,{
   faq:[
    ["Do I pay online?","No. Placing a pre-order is free — you pay when you pick up or receive your order."],
    ["How far ahead should I order?","Order at least one day before the date you want. We bake to order, so a little notice lets us bake it fresh for you."],
-   ["Where can I pick up?","In Gatineau or Downtown Ottawa — you choose at checkout. The exact address and time come with your confirmation."],
-   ["When do you deliver?","We deliver everywhere on Wednesdays and Saturdays. Pick the day at checkout and we'll confirm the timing with you."],
+   ["Where and when can I pick up?","In Gatineau or Downtown Ottawa — you choose at checkout. Pickup days: "+pickText("en","long")+". The exact address and time come with your confirmation."],
+   ["When do you deliver?","We deliver everywhere: "+delivText("en","long")+". The minimum order for delivery is "+"$"+SETTINGS.deliveryMin+". Pick the day at checkout and we'll confirm the timing with you."],
    ["How do I send my order?","At the last step, tap “Send my order by text” — your messages app opens with the order written for you. Just press Send, and we'll text you back to confirm before we bake."]]
 });
 Object.assign(T.fr,{
-  top:"Précommandes ouvertes · Cueillette à Gatineau et au centre-ville · Livraison mer. et sam.",
+  top:"Cueillette "+pickText("fr","short")+" · Livraison "+delivText("fr","short"),
   sig_l1:"Levé naturellement avec notre propre levain",
-  f3:"Livraison partout — mercredis et samedis", delivery_s:"Partout · mer. et sam.",
-  del_h:"Livraison partout", del_p:"Nous livrons partout les mercredis et samedis. Indiquez votre adresse lors de la commande et nous confirmerons l'heure avec vous.",
-  w3p:"Pas seulement un quartier — nous livrons partout les mercredis et samedis.",
-  del_days_hint:"Livraison les mercredis et samedis.", del_short:"mer. et sam.", e_date_pick:"Veuillez choisir une journée.",
+  f3:"Livraison partout — "+delivText("fr","short"), delivery_s:"Commande min. "+SETTINGS.deliveryMin+" $"+" · "+delivText("fr","short"), pickup_s:"Gratuit · "+pickText("fr","short"),
+  pick_p:"Jours de cueillette : "+pickText("fr","long")+". Choisissez Gatineau ou le centre-ville d'Ottawa au moment de commander — l'adresse exacte et l'heure vous sont envoyées avec la confirmation.",
+  pick_days_hint:"Jours de cueillette : "+pickText("fr","long")+".",
+  min_warn:"La livraison demande une commande minimum de "+SETTINGS.deliveryMin+" $"+".", min_add:"Ajoutez {x}, ou choisissez la cueillette gratuite.", e_min:"La livraison demande une commande minimum de "+SETTINGS.deliveryMin+" $"+".",
+  min_note:"Livraison à partir de "+SETTINGS.deliveryMin+" $"+" d'achat — ajoutez {x} pour la livraison, ou choisissez la cueillette gratuite.",
+  del_h:"Livraison partout", del_p:"Nous livrons partout : "+delivText("fr","long")+". Commande minimum pour la livraison : "+SETTINGS.deliveryMin+" $"+". Indiquez votre adresse lors de la commande et nous confirmerons l'heure avec vous.",
+  w3p:"Pas seulement un quartier — nous livrons partout, dès "+SETTINGS.deliveryMin+" $"+" d'achat : "+delivText("fr","long")+".",
+  del_days_hint:"Jours de livraison : "+delivText("fr","long")+".", del_short:delivText("fr","short"), e_date_pick:"Veuillez choisir une journée.",
   fav_eyebrow:"Un aperçu du menu", fav_h:"Les favoris", fav_sub:"Seulement trois de nos favoris — le menu complet présente tous nos pains et douceurs.", see_in_menu:"Voir dans le menu", all_k:"Menu complet", all_h:"Pains et douceurs", all_p:"Levain, pains au lait, focaccia, baguettes, ciabatta, brioches à la cannelle, biscuits et gâteaux.", see_full_menu:"Voir tout le menu",
-  pop_p:"Nos pains et douceurs préférés, réunis dans une boîte — jusqu'à 30 % de rabais. Précommandez maintenant, payez à la cueillette ou à la livraison.", pop_cta:"Voir les boîtes", pop_later:"Plus tard", pop_close:"Fermer",
+  pop_p:"Nos pains et douceurs préférés, réunis dans une boîte — jusqu'à 30 % de rabais. Seulement jusqu'au "+bfUntil("fr")+". Payez à la cueillette ou à la livraison.", pop_cta:"Voir les boîtes", pop_later:"Plus tard", pop_close:"Fermer",
   bf_tag:"Vendredi fou", bf_h:"Les boîtes du Vendredi fou", bf_p:"Nos pains et douceurs préférés, réunis dans une boîte à prix spécial. Précommandez comme d'habitude — payez à la cueillette ou à la livraison.",
-  bf_upto:"jusqu'à", bf_off:"de rabais", bf_ribbon:"Boîtes de pain jusqu'à 30 % de rabais", bf_see:"Voir les boîtes", bf_choose:"Choisir cette boîte",
-  bf_reg_price:"Prix régulier", bf_reg_value:"Valeur régulière", bf_inside:"Dans la boîte", boxes_n:"boîtes", f_boxes:"Vendredi fou", cat_boxes:"Boîtes du Vendredi fou", bf_limited:"Durée limitée",
-  tag_bf_best:"Meilleure valeur", choose_choice:"Baguette ou ciabatta — au choix", pick_first_choice:"Choisissez d'abord baguette ou ciabatta",
+  bf_upto:"jusqu'à", bf_off:"de rabais", bf_ribbon:"Boîtes de pain jusqu'à 30 % de rabais · jusqu'au "+bfUntil("fr"), bf_see:"Voir les boîtes", bf_choose:"Choisir cette boîte",
+  bf_reg_price:"Prix régulier", bf_reg_value:"Valeur régulière", bf_inside:"Dans la boîte", boxes_n:"boîtes", f_boxes:"Vendredi fou", cat_boxes:"Boîtes du Vendredi fou", bf_limited:"Jusqu'au "+bfUntil("fr"),
+  tag_bf_best:"Meilleure valeur", with_w:"avec", add_box:"Ajouter la boîte", choose_choice:"Baguette ou ciabatta — au choix", pick_first_choice:"Choisissez d'abord baguette ou ciabatta",
   st3:"Envoi", choose_flavour:"Choisissez une saveur", flavours:"saveurs", pick_first:"Choisissez d'abord une saveur", choose_topping:"Choisissez une garniture", toppings:"garnitures", pick_first_top:"Choisissez d'abord une garniture", in_basket:"Dans votre panier :", place:"Continuer vers la dernière étape", nopay2:"Ensuite : envoyez-nous votre commande par texto. Aucun paiement en ligne.",
   not_sent_b:"Votre commande n'est pas encore envoyée!", not_sent_p:"Nous la recevons seulement quand vous nous l'envoyez par texto — ça prend 5 secondes.",
   send_h:"Envoyez-nous votre commande", how1:"Appuyez sur le bouton ci-dessous — votre application de messages s'ouvre avec la commande déjà écrite.",
@@ -1034,8 +1081,8 @@ Object.assign(T.fr,{
   faq:[
    ["Dois-je payer en ligne?","Non. La précommande est gratuite — vous payez à la cueillette ou à la livraison."],
    ["Combien de temps à l'avance commander?","Au moins un jour avant la date souhaitée. Nous cuisons sur commande : un peu d'avance nous permet de cuire votre pain frais."],
-   ["Où puis-je récupérer ma commande?","À Gatineau ou au centre-ville d'Ottawa — vous choisissez au moment de commander. L'adresse et l'heure vous sont envoyées avec la confirmation."],
-   ["Quand livrez-vous?","Nous livrons partout les mercredis et samedis. Choisissez la journée en commandant et nous confirmerons l'heure avec vous."],
+   ["Où et quand puis-je récupérer ma commande?","À Gatineau ou au centre-ville d'Ottawa — vous choisissez au moment de commander. Jours de cueillette : "+pickText("fr","long")+". L'adresse et l'heure vous sont envoyées avec la confirmation."],
+   ["Quand livrez-vous?","Nous livrons partout : "+delivText("fr","long")+". La commande minimum pour la livraison est de "+SETTINGS.deliveryMin+" $"+". Choisissez la journée en commandant et nous confirmerons l'heure avec vous."],
    ["Comment envoyer ma commande?","À la dernière étape, appuyez sur « Envoyer ma commande par texto » — votre application de messages s'ouvre avec la commande déjà écrite. Appuyez sur Envoyer, et nous vous répondrons pour confirmer avant de cuire."]]
 });
 
@@ -1069,11 +1116,12 @@ const pname = p => (lang==="fr" && p.name_fr) ? p.name_fr : p.name;
 const vlabel = p => p.vkind==="choice" ? t("choose_choice") : `${p.vkind==="topping"?t("choose_topping"):t("choose_flavour")} · ${p.variants.length} ${p.vkind==="topping"?t("toppings"):t("flavours")}`;
 const vfirst = p => t(p.vkind==="choice" ? "pick_first_choice" : p.vkind==="topping" ? "pick_first_top" : "pick_first");
 function variantHTML(p){
-  const inCart = p.variants.filter(v=>cart[p.id+"::"+v.id]).map(v=>`${esc(v[lang])} × <b>${cart[p.id+"::"+v.id]}</b>`);
+  const box = p.cat==="boxes";
+  const inCart = p.variants.filter(v=>cart[p.id+"::"+v.id]).map(v=>`${box?`${esc(pname(p))} ${t("with_w")} `:""}${esc(v[lang])} × <b>${cart[p.id+"::"+v.id]}</b>`);
   return `<div class="variants">
     <div class="vlabel">${vlabel(p)}</div>
     <div class="vchips">${p.variants.map(v=>`<button type="button" data-pick="${p.id}" data-var="${v.id}" class="${pick[p.id]===v.id?"on":""}">${esc(v[lang])}</button>`).join("")}</div>
-    <div class="vrow"><button type="button" class="add" data-addv="${p.id}">${PLUS}${t("add")}${pick[p.id]?` — ${esc(p.variants.find(v=>v.id===pick[p.id])[lang])}`:""}</button>
+    <div class="vrow"><button type="button" class="add" data-addv="${p.id}">${PLUS}${box?t("add_box"):t("add")}${pick[p.id]?` — ${box?t("with_w")+" ":""}${esc(p.variants.find(v=>v.id===pick[p.id])[lang])}`:""}</button>
       ${needPick[p.id]&&!pick[p.id]?`<span class="vhint">${vfirst(p)}</span>`:""}</div>
     ${inCart.length?`<div class="vin">${t("in_basket")} ${inCart.join(" · ")} — <a href="#order" data-go="order">${t("view_basket")}</a></div>`:""}
   </div>`;
@@ -1110,7 +1158,7 @@ function applyStatic(){
   document.querySelectorAll(".socials").forEach(el=>el.innerHTML = soc("ig",SETTINGS.instagram,IG_SVG,"Instagram","ig_s","ig_sub_soon") + soc("fb",SETTINGS.facebook,FB_SVG,"Facebook","fb_s","fb_sub_soon"));
   document.querySelectorAll("a.social.ig").forEach(a=>{ if(SETTINGS.instagram) a.href=SETTINGS.instagram; });
   document.querySelectorAll("a.social.fb").forEach(a=>{ if(SETTINGS.facebook) a.href=SETTINGS.facebook; });
-  document.querySelectorAll(".bf-only").forEach(el=>el.style.display = SETTINGS.blackFriday ? "" : "none");
+  document.querySelectorAll(".bf-only").forEach(el=>el.style.display = BF_ON ? "" : "none");
 }
 function itemHTML(p){
   return `<div class="item${p.variants?" wide":""}" id="item-${p.id}">
@@ -1126,7 +1174,7 @@ function boxItemHTML(p){
     <p>${esc(p[lang])}</p>
     <div class="bx-inc${p.mystery?" mystery":""}"><span>${t("bf_inside")}</span><ul>${p.incl.map(x=>`<li>${esc(x[lang])}</li>`).join("")}</ul></div>
     <div class="bx-price"><b>${fmt(p.price)}</b><span class="was">${t(p.wasK)} <s>${esc(p.was[lang])}</s></span></div>
-    ${p.variants ? variantHTML(p) : `<div class="act">${addBtn(p.id)}</div>`}</div>`;
+    ${p.variants ? variantHTML(p) : `<div class="act">${cart[p.id] ? stepper(p.id) : `<button type="button" class="add" data-add="${p.id}">${PLUS}${t("add_box")}</button>`}</div>${cart[p.id]?`<div class="vin">${t("in_basket")} ${esc(pname(p))} × <b>${cart[p.id]}</b> — <a href="#order" data-go="order">${t("view_basket")}</a></div>`:""}`}</div>`;
 }
 function renderCounts(){
   document.querySelectorAll(".cartCount").forEach(el=>el.textContent=count());
@@ -1175,13 +1223,13 @@ function renderMenu(){
 }
 function cartLines(){
   return Object.keys(cart).map(id=>{ const {p,v}=parseKey(id); return `<div class="line">
-      <div class="nm">${esc(pname(p))}<small>${v?`<span class="vname">${esc(v[lang])}</span> · `:""}${p.unit?esc(unitOf(p))+" · ":""}${fmt(p.price)} ${t("each")}</small></div>
+      <div class="nm">${esc(pname(p))}<small>${v?`<span class="vname">${p.cat==="boxes"?t("with_w")+" ":""}${esc(v[lang])}</span> · `:""}${p.unit?esc(unitOf(p))+" · ":""}${fmt(p.price)} ${t("each")}</small></div>
       ${stepper(id)}<div class="amt">${fmt(p.price*cart[id])}</div></div>`; }).join("");
 }
 function renderBasket(){
   const el=document.getElementById("basketPanel");
   if(!count()){ el.innerHTML=`<div class="empty"><b>${t("empty_b")}</b>${t("empty_p2")}<div style="margin-top:18px"><a class="btn btn-dark" href="#menu" data-go="menu">${t("see_menu")}</a></div></div>`; return; }
-  el.innerHTML = cartLines() + `<div class="tot"><span>${t("est")}</span><span>${fmt(subtotal())}</span></div><div class="note">${t("nopay")}</div>
+  el.innerHTML = cartLines() + `<div class="tot"><span>${t("est")}</span><span>${fmt(subtotal())}</span></div><div class="note">${t("nopay")}</div>${subtotal() < SETTINGS.deliveryMin ? `<div class="note minnote">${t("min_note").replace("{x}", fmt(SETTINGS.deliveryMin - subtotal()))}</div>` : ""}
     <div class="order-actions"><a class="btn btn-line" href="#menu" data-go="menu" style="color:var(--choc)">${t("keep_shopping")}</a><a class="btn btn-gold" href="#checkout" data-go="checkout">${t("to_checkout")} ${ARROW}</a></div>`;
 }
 function minDate(){ const d=new Date(); d.setDate(d.getDate()+SETTINGS.leadDays); const z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
@@ -1190,10 +1238,16 @@ function field(id, label, req, type="text", extra=""){
     <input id="${id}" data-field="${id}" type="${type}" value="${esc(form[id]||"")}" ${extra}><span class="err">${errors[id]||""}</span></div>`;
 }
 function iso(d){ const z=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`; }
+function isServiceDay(method, d){
+  const C = SETTINGS[method==="delivery"?"delivery":"pickup"], s = iso(d);
+  if((C.extraDates||[]).includes(s)) return true;
+  if(C.weeklyFrom && s < C.weeklyFrom) return false;
+  return C.weekly.includes(d.getDay());
+}
 function availableDates(method, n=8){
-  const days = method==="delivery" ? SETTINGS.deliveryDays : SETTINGS.pickupDays;
+  const ok = d => isServiceDay(method, d);
   const out=[], d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()+SETTINGS.leadDays);
-  for(let i=0;i<120 && out.length<n;i++){ if(days.includes(d.getDay())) out.push(iso(d)); d.setDate(d.getDate()+1); }
+  for(let i=0;i<180 && out.length<n;i++){ if(ok(d)) out.push(iso(d)); d.setDate(d.getDate()+1); }
   return out;
 }
 function dateHTML(){
@@ -1201,7 +1255,7 @@ function dateHTML(){
   const chips = availableDates(form.method).map(ds=>{ const [y,m,dd]=ds.split("-").map(Number); const dt=new Date(y,m-1,dd);
     return `<button type="button" data-date="${ds}" class="${form.date===ds?"on":""}"><small>${dt.toLocaleDateString(loc,{weekday:"short"})}</small><b>${dd}</b><small>${dt.toLocaleDateString(loc,{month:"short"})}</small></button>`; }).join("");
   return `<div class="f${errors.date?" bad":""}"><span class="flabel">${t("date")} <em>*</em></span>
-    ${form.method==="delivery"?`<p class="hint">${t("del_days_hint")}</p>`:""}
+    <p class="hint">${t(form.method==="delivery"?"del_days_hint":"pick_days_hint")}</p>
     <div class="days">${chips}</div><span class="err">${errors.date||""}</span></div>`;
 }
 function formHTML(){
@@ -1216,6 +1270,7 @@ function formHTML(){
       <button type="button" data-method="pickup" class="${m==="pickup"?"on":""}"><b>${t("pickup")}</b><span>${t("pickup_s")}</span></button>
       <button type="button" data-method="delivery" class="${m==="delivery"?"on":""}"><b>${t("delivery")}</b><span>${t("delivery_s")}</span></button>
     </div>
+    ${m==="delivery" && subtotal() < SETTINGS.deliveryMin ? `<div class="minwarn" id="minWarn"><b>${t("min_warn")}</b> ${t("min_add").replace("{x}", fmt(SETTINGS.deliveryMin - subtotal()))} <a href="#menu" data-go="menu">${t("see_menu")} →</a></div>` : ""}
     ${m==="pickup" ? `<div class="flabel" style="margin-bottom:8px">${t("pick_loc")} <em>*</em></div>
       <div class="choice">
         <button type="button" data-spot="gatineau" class="${form.spot==="gatineau"?"on":""}"><b>Gatineau</b><span>${t("addr_sent")}</span></button>
@@ -1289,11 +1344,12 @@ function validate(){
   if(!availableDates(form.method,60).includes(v("date"))) errors.date = t("e_date_pick");
   if(v("slot")==="") errors.slot = t("e_time");
   if(!form.agree) errors.agree = t("e_agree");
+  if(form.method==="delivery" && subtotal() < SETTINGS.deliveryMin) errors.min = t("e_min");
   return Object.keys(errors).length===0;
 }
 function placeOrder(){
   if(!count()){ go("order"); return; }
-  if(!validate()){ renderCheckout(); document.getElementById("formMsg").scrollIntoView({behavior:"smooth",block:"center"}); return; }
+  if(!validate()){ renderCheckout(); (document.getElementById("minWarn")||document.getElementById("formMsg")).scrollIntoView({behavior:"smooth",block:"center"}); return; }
   const now=new Date(), z=n=>String(n).padStart(2,"0");
   lastOrder = {
     number:"WB-"+String(now.getFullYear()).slice(2)+z(now.getMonth()+1)+z(now.getDate())+"-"+Math.random().toString(36).slice(2,6).toUpperCase(),
@@ -1361,17 +1417,18 @@ function renderPop(){
       <span class="pr"><b>${fmt(p.price)}</b><s>${esc(p.was[lang])}</s></span></a>`).join("");
   const x=document.getElementById("popClose"); x.setAttribute("aria-label", t("pop_close"));
 }
-function popDue(){ const last=+(store.get("wild-bf-pop")||0); return !last || (Date.now()-last) > SETTINGS.bfPopupEveryHours*3600e3; }
+const visit = { get(k){ try{ return window.sessionStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ window.sessionStorage.setItem(k,v); }catch(e){} } };
+function popDue(){ return !visit.get("wild-bf-pop-v2"); }
 function openPop(){
-  if(!SETTINGS.blackFriday || !PRODUCTS.some(p=>p.cat==="boxes") || ["order","checkout","thanks"].includes(current)) return;
+  if(!BF_ON || !PRODUCTS.some(p=>p.cat==="boxes") || ["order","checkout","thanks"].includes(current)) return;
   renderPop(); pop.hidden=false; document.documentElement.classList.add("pop-open");
-  requestAnimationFrame(()=>pop.classList.add("on"));
+  pop.classList.remove("out");
   try{ document.getElementById("popClose").focus({preventScroll:true}); }catch(e){}
 }
 function closePop(){
   if(pop.hidden) return;
-  store.set("wild-bf-pop", String(Date.now()));
-  pop.classList.remove("on"); document.documentElement.classList.remove("pop-open");
+  visit.set("wild-bf-pop-v2", "1");
+  pop.classList.add("out"); document.documentElement.classList.remove("pop-open");
   setTimeout(()=>{ pop.hidden=true; }, 200);
 }
 pop.addEventListener("click", e=>{
@@ -1385,7 +1442,7 @@ document.querySelectorAll("a.tel").forEach(a=>a.href="tel:"+SETTINGS.phoneIntl);
 document.getElementById("yr").textContent = new Date().getFullYear();
 applyStatic();
 go(viewFromHash(), false);
-if(SETTINGS.blackFriday && popDue()) setTimeout(openPop, 1200);
+if(BF_ON && popDue()) setTimeout(openPop, 1200);
 </script>
 </body>
 </html>
